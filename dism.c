@@ -18,8 +18,8 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     char* opcodes[0xff] = {};
-    char* short_reg[0x111] = {"al", "cl", "dl", "bl", "ah", "ch", "dh", "bh"};
-    char* long_reg[0x111] = {"ax", "cx", "dx", "bx", "sp", "bp", "si", "di"};
+    char* short_reg[0x8] = {"al", "cl", "dl", "bl", "ah", "ch", "dh", "bh"};
+    char* long_reg[0x8] = {"ax", "cx", "dx", "bx", "sp", "bp", "si", "di"};
 
     opcodes[0b100010] = "mov";
 
@@ -37,11 +37,12 @@ int main(int argc, char* argv[]) {
         uint8_t opcode = buf[i] >> 2;
         if (opcodes[opcode] != NULL) {
             uint8_t d, w;
-            w = (buf[i] & 0b1) == 0b1;
-            d = (buf[i] & 0b10) == 0b10;
+            w = buf[i] & 1;
+            d = (buf[i] >> 1) & 1;
             i++;
-            uint8_t source_reg = d ? buf[i] >> 3 & 0b111 : buf[i] & 0b111;
-            uint8_t dest_reg = d ? buf[i] & 0b111 : buf[i] >> 3 & 0b111;
+            uint8_t reg_nask = 0b111;
+            uint8_t source_reg = d ? buf[i] >> 3 & reg_nask : buf[i] & reg_nask;
+            uint8_t dest_reg = d ? buf[i] & reg_nask : buf[i] >> 3 & reg_nask;
 
             sprintf(command_stream[stream_i++], "%s %s, %s", opcodes[opcode],
                     w ? long_reg[source_reg] : short_reg[source_reg], w ? long_reg[dest_reg] : short_reg[dest_reg]);
