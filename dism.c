@@ -24,6 +24,10 @@ int main(int argc, char* argv[]) {
         printf("Binary file has to be specified \n");
         return 1;
     }
+    uint8_t buf[1024];
+    uint32_t stream_i = 0;
+    char command_stream[1024][30] = {{}};
+
     HANDLE_PTR opcodes[0xff + 1] = {};
 
     opcodes[0x88] = &mov_register_to_register;
@@ -54,18 +58,16 @@ int main(int argc, char* argv[]) {
         printf("Failed to open input file");
         return 1;
     }
-
-    uint8_t buf[1024];
     const size_t bytes_read = fread(buf, 1, 1024, handle);
-    char command_stream[1024][30] = {{}};
-    uint32_t stream_i = 0;
 
     for (int i = 0; i < bytes_read; ++i) {
-        if (opcodes[buf[i]]) {
-            size_t offset = (opcodes[buf[i]])(i, buf, command_stream[stream_i++]);
-            i += offset;
+        if (!opcodes[buf[i]]) {
+            continue;
         }
+        size_t offset = (opcodes[buf[i]])(i, buf, command_stream[stream_i++]);
+        i += offset;
     }
+
     for (uint32_t i = 0; i < stream_i; ++i) {
         printf("%s \n", command_stream[i]);
     }
@@ -77,17 +79,15 @@ size_t mov_register_to_register(int current_byte, uint8_t* buf, char* command_bu
     uint8_t first_byte, second_byte, dir, wide, rm, reg, mode;
     const char* source;
     const char* dst;
-    uint8_t mode_mask = 0b11;
-    uint8_t reg_mask = 0b111;
 
     first_byte = buf[current_byte];
     second_byte = buf[current_byte + 1];
 
     wide = first_byte & 1;
     dir = (first_byte >> 1) & 1;
-    reg = second_byte >> 3 & reg_mask;
-    rm = second_byte & reg_mask;
-    mode = second_byte >> 6 & mode_mask;
+    reg = (second_byte >> 3) & 0b111;
+    rm = second_byte & 0b111;
+    mode = (second_byte >> 6) & 0b11;
 
     // register to register move
     if (mode == 0b11) {
@@ -137,9 +137,8 @@ size_t mov_register_to_register(int current_byte, uint8_t* buf, char* command_bu
 
 size_t mov_immediate_to_register(int current_byte, uint8_t* buf, char* command_buf) {
     size_t offset = 0;
-    uint8_t reg_mask = 0b111;
     uint8_t w = buf[current_byte] >> 3 & 1;
-    uint8_t reg = buf[current_byte] & reg_mask;
+    uint8_t reg = buf[current_byte] & 0b111;
     uint16_t data;
     if (w) {
         data = (buf[current_byte + 2] << 8) + buf[current_byte + 1];
@@ -153,7 +152,7 @@ size_t mov_immediate_to_register(int current_byte, uint8_t* buf, char* command_b
 }
 
 void print_byte(uint8_t byte) {
-    for (int i = 7; i >= 0; --i) {
+    for (uint8_t i = 7; i >= 0; --i) {
         printf("%d", byte >> i & 1);
     }
     printf("\n");
