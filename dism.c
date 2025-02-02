@@ -1,11 +1,6 @@
-
-#include <stdatomic.h>
-#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <sys/resource.h>
 
 void print_byte(uint8_t byte);
 size_t mov_register_to_register(int current_byte, uint8_t* buf, char* command_buf);
